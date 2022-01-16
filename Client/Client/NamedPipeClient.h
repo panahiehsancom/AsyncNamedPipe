@@ -22,6 +22,7 @@ private:
 	std::wstring address_;
 	const unsigned int buffer_size_;
 	bool is_connected_;
+	bool write_command_;
 	HANDLE pipe_;
 	std::shared_ptr<std::thread> receiving_thread_;
 	boost::signals2::signal<void(const char* data, unsigned int size)> on_data_received_connection_;

@@ -10,13 +10,14 @@ std::string convert_standard_time(int year, int month, int day, int hour, int mi
 std::string get_now();
 void data_received(const char* data, unsigned int size)
 {
-	std::cout << "data received :" << data << std::endl;
+	std::string str_rec_data(data, size);
+	std::cout << "data received :" << str_rec_data << std::endl;
 }
 
 int main()
 {
 
-	std::shared_ptr<AsyncClientFactory> factory = std::make_shared<AsyncClientFactory>(L"\\\\.\\pipe\\HelloWorld");
+	std::shared_ptr<AsyncClientFactory> factory = std::make_shared<AsyncClientFactory>(L"\\\\.\\pipe\\pipe");
 	std::shared_ptr<IAsyncClient> client = factory->build(IAsyncClientFactory::ClientType::NamedPipe);
 	client->connect_on_data_received(std::bind(data_received, std::placeholders::_1, std::placeholders::_2));
 	if (client == nullptr)

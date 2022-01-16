@@ -4,12 +4,15 @@
 #include <thread>
 #include <iostream>
 
+#include <boost/thread.hpp>
+
 #include "IAsyncServer.h"
+#include "IAsyncClientFactory.h"
 
 class NamedPipeServer : public IAsyncServer
 {
 public:
-	NamedPipeServer(std::wstring namepipe_address, size_t buffer);
+	NamedPipeServer(std::wstring namepipe_address, size_t buffer, std::shared_ptr<IAsyncClientFactory> client_factory);
 	// Inherited via IAsyncServer
 	bool init() override;
 	bool start() override;
@@ -23,14 +26,16 @@ public:
 
 private:
 	void worker_thread();
-	std::wstring namepipe_address_;
-	std::shared_ptr<std::thread> receiving_thread_;
-	HANDLE pipe_;
-	bool is_running_;
 	std::string get_last_error();
 	boost::signals2::signal<void(int client_id)> client_add_connection_;
 	boost::signals2::signal<void(std::shared_ptr<IClientEntity>)> client_disconnected_connection_;
-	boost::signals2::signal<void(std::shared_ptr<IClientEntity>client, const char* data, unsigned int size)> on_data_received_connection_;
-	size_t buffer_;
+	boost::signals2::signal<void(std::shared_ptr<IClientEntity> client, const char* data, unsigned int size)> on_data_received_connection_;
+	boost::thread_group thread_group_;
+	std::wstring namepipe_address_; 
+	std::shared_ptr<IAsyncClientFactory> client_factory_;
+	HANDLE pipe_;
+	bool is_running_; 
+	size_t buffer_size_;
+	std::shared_ptr<IClientEntity> current_client_;
 };
 

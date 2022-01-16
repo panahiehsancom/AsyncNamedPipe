@@ -13,7 +13,9 @@ bool VirtualClientNamedPipe::send(const char* data, const unsigned int size)
 {
 	if (is_connected_)
 	{
-		return true;
+		DWORD dwWritten;
+		bool bSuccess = WriteFile(pipe_, data, size, &dwWritten, NULL); 
+		return bSuccess;
 	}
 	else
 		return false;

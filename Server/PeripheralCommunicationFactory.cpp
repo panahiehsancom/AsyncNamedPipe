@@ -8,6 +8,9 @@ PeripheralCommunicationFactory::PeripheralCommunicationFactory(std::wstring name
 std::shared_ptr<IAsyncServer> PeripheralCommunicationFactory::build(CommunicationType communication)
 {
 	if (communication == ICommunicationFactory::CommunicationType::NamedPipeServer)
-		return std::make_shared<NamedPipeServer>(named_pipe_address_, buffer_size_);
+	{
+		std::shared_ptr<IAsyncClientFactory> client_factory = std::make_shared<AsyncClientFactory>();
+		return std::make_shared<NamedPipeServer>(named_pipe_address_, buffer_size_, client_factory);
+	}
 	return nullptr;
 }

@@ -1,38 +1,24 @@
 #include "NamedPipeServer.h"
-#define BUFFER_SIZE		4096 
-NamedPipeServer::NamedPipeServer(std::wstring namepipe_address, size_t buffer) : namepipe_address_(namepipe_address), buffer_(buffer)
+
+
+NamedPipeServer::NamedPipeServer(std::wstring namepipe_address, size_t buffer, std::shared_ptr<IAsyncClientFactory> client_factory) :
+	namepipe_address_(namepipe_address), buffer_size_(buffer), client_factory_(client_factory)
 {
 	is_running_ = false;
 }
 
 bool NamedPipeServer::init()
-{
-	SECURITY_ATTRIBUTES sa;
-	sa.lpSecurityDescriptor = (PSECURITY_DESCRIPTOR)malloc(
-		SECURITY_DESCRIPTOR_MIN_LENGTH);
-	InitializeSecurityDescriptor(sa.lpSecurityDescriptor,
-		SECURITY_DESCRIPTOR_REVISION);
-	// ACL is set as NULL in order to allow all access to the object.
-	SetSecurityDescriptorDacl(sa.lpSecurityDescriptor, TRUE, NULL, FALSE);
-	sa.nLength = sizeof(sa);
-	sa.bInheritHandle = TRUE;
-
-	pipe_ = CreateNamedPipe(
-		namepipe_address_.c_str(), // name of the pipe
-		PIPE_ACCESS_DUPLEX, // 1-way pipe -- send only
-		PIPE_TYPE_MESSAGE |			// Message type pipe 
-		PIPE_READMODE_MESSAGE | PIPE_WAIT,	// Message-read mode , // send data as a byte stream 
-		PIPE_UNLIMITED_INSTANCES, // no outbound buffer
-		BUFFER_SIZE,				// Output buffer size in bytes
-		BUFFER_SIZE,				// Input buffer size in bytes
-
-		NMPWAIT_USE_DEFAULT_WAIT,	// Time-out interval
-		&sa							// Security attributes
-	);
-	if (pipe_ == NULL || pipe_ == INVALID_HANDLE_VALUE) {
-		//Failed to create outbound pipe instance."
-		//look up error code here using GetLastError()
-		std::cout << get_last_error() << std::endl;
+{ 
+	pipe_ = CreateNamedPipe(namepipe_address_.c_str(),
+		PIPE_ACCESS_DUPLEX,
+		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,   // FILE_FLAG_FIRST_PIPE_INSTANCE is not needed but forces CreateNamedPipe(..) to fail if the pipe already exists...
+		1,
+		buffer_size_,
+		buffer_size_,
+		NMPWAIT_USE_DEFAULT_WAIT,
+		NULL); 
+	if (pipe_ == INVALID_HANDLE_VALUE)
+	{
 		return false;
 	}
 	return true;
@@ -40,24 +26,15 @@ bool NamedPipeServer::init()
 
 bool NamedPipeServer::start()
 {
-	BOOL result = ConnectNamedPipe(pipe_, NULL);
-	if (!result)
-	{
-		std::cout << get_last_error() << std::endl;
-		//look up error code here using GetLastError()
-		CloseHandle(pipe_);
-		return false;
-	}
 	is_running_ = true;
-	receiving_thread_ = std::make_shared<std::thread>(std::bind(&NamedPipeServer::worker_thread, this));
-	return true;
+	thread_group_.create_thread(std::bind(&NamedPipeServer::worker_thread, this));
+	return is_running_;
 }
 
 bool NamedPipeServer::stop()
 {
 	is_running_ = false;
-	if (receiving_thread_->joinable())
-		receiving_thread_->join();
+	thread_group_.join_all(); 
 	return true;
 }
 
@@ -78,18 +55,9 @@ boost::signals2::connection NamedPipeServer::connect_on_client_disconnected(std:
 
 bool NamedPipeServer::send(const char* data, size_t size, int client_id)
 {
-	DWORD cbBytesWritten, cbReplyBytes;
-	bool bResult = WriteFile(		// Write to the pipe.
-		pipe_,					// Handle of the pipe
-		data,				// Buffer to write to 
-		size,			// Number of bytes to write 
-		&cbBytesWritten,		// Number of bytes written 
-		NULL);
-	if (!bResult)
-	{
-		std::cout << get_last_error() << std::endl;
-	}
-	return bResult;
+	DWORD dwWritten;
+	bool bSuccess = WriteFile(pipe_, data, size, &dwWritten, NULL); 
+	return bSuccess;
 }
 
 bool NamedPipeServer::send(const char* buffer, size_t size, std::shared_ptr<IClientEntity> clientEntity)
@@ -105,25 +73,22 @@ boost::signals2::connection NamedPipeServer::connect_on_data_received(std::funct
 
 void NamedPipeServer::worker_thread()
 {
-	char buffer[2048];
-	DWORD cbBytesRead, cbRequestBytes;
-	while (is_running_)
+	DWORD dwRead;
+	std::vector<char> buffer(buffer_size_);
+	while (pipe_ != INVALID_HANDLE_VALUE)
 	{
-		cbRequestBytes = buffer_;
-		bool bResult = ReadFile(			// Read from the pipe.
-			pipe_,					// Handle of the pipe
-			buffer,				// Buffer to receive data
-			buffer_,			// Size of buffer in bytes
-			&cbBytesRead,			// Number of bytes read
-			NULL);					// Not overlapped I/O
-
-		if (!bResult/*Failed*/ || cbBytesRead == 0/*Finished*/)
+		if (ConnectNamedPipe(pipe_, NULL) != FALSE)   // wait for someone to connect to the pipe
 		{
-			std::cout << get_last_error() << std::endl;
-			is_running_ = false;
-		} 
-		std::string data(buffer, cbBytesRead);
-		on_data_received_connection_(nullptr, data.c_str(), data.size());
+			while (ReadFile(pipe_, buffer.data(), sizeof(buffer) - 1, &dwRead, NULL) != FALSE)
+			{
+				if (current_client_ == nullptr && client_factory_ != nullptr)
+				{
+					current_client_ = client_factory_->build(IAsyncClientFactory::ClientType::VirtualNamedPipe, pipe_, "unknown", true);
+				}
+				on_data_received_connection_(current_client_, buffer.data(), dwRead);
+			}
+		}
+		DisconnectNamedPipe(pipe_);
 	}
 }
 
@@ -138,7 +103,5 @@ std::string NamedPipeServer::get_last_error()
 		NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)& messageBuffer, 0, NULL);
 
 	std::string message(messageBuffer, size);
-	return message;
-
-
+	return message; 
 }

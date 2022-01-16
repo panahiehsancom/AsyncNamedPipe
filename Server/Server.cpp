@@ -10,14 +10,14 @@ void data_received(std::shared_ptr<IClientEntity> client, const char* data, size
 {
 	std::cout << "data received :" << data << std::endl;
 	std::string temp = std::to_string(counter_);
-	server_->send(temp.data(), temp.size(), client);
+	server_->send(temp.data(), temp.size(), 0);
 	counter_++;
 }
 
 int main()
 {
-	std::shared_ptr<Injector> injector = std::make_shared<Injector>();
-	server_ = injector->create_named_pipe_server(L"\\\\.\\pipe\\HelloWorld", 2048);
+	std::shared_ptr<Injector> injector = std::make_shared<Injector>(); 
+	server_ = injector->create_named_pipe_server(L"\\\\.\\pipe\\pipe", 2048);
 	server_->connect_on_data_received(std::bind(data_received, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	bool init_state = server_->init();
 	if (!init_state)

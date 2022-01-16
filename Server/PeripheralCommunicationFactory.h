@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "AsyncClientFactory.h"
 #include "ICommunicationFactory.h" 
 #include "NamedPipeServer.h"
 
