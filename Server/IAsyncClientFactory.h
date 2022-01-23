@@ -3,13 +3,11 @@
 #include "IClientEntity.h"
 
 #include "VirtualClientNamedPipe.h"
-/**
- * 
- */
+ 
 class IAsyncClientFactory {
 
 public:
-	enum class ClientType { 
+	enum ClientType { 
 		VirtualNamedPipe =0x01,
 		//VirtualTCPClient =0x02,
 		//VirtualUDPClient = 0x03,

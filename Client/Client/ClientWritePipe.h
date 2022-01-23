@@ -4,12 +4,12 @@
 
 #include "IAsyncClient.h"
 
-class NamedPipeClient : public IAsyncClient
+class ClientWritePipe : public IAsyncClient
 {
 
 	// Inherited via IAsyncClient
 public:
-	NamedPipeClient(std::string address, unsigned int  buffer_size);	
+	ClientWritePipe(std::string address, unsigned int  buffer_size);
 	bool init() override;
 	bool connect() override;
 	bool is_connected() override;
@@ -18,13 +18,9 @@ public:
 	bool send(const char* data, size_t size) override;
 
 private:
-	void worker_thread();
 	std::string address_;
 	const unsigned int buffer_size_;
 	bool is_connected_;
-	bool write_command_;
-	HANDLE pipe_;
-	std::shared_ptr<std::thread> receiving_thread_;
+	HANDLE pipe_; 
 	boost::signals2::signal<void(const char* data, unsigned int size)> on_data_received_connection_;
 };
-

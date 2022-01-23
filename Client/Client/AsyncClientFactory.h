@@ -1,15 +1,16 @@
 #pragma once
 
+
 #include "IAsyncClientFactory.h"
+#include "ClientReadPipe.h"
+#include "ClientWritePipe.h"
+#include "NamedPipeClient.h"
 
 class AsyncClientFactory : public IAsyncClientFactory
 {
 public:
-	AsyncClientFactory(std::wstring pipe_address);
+	AsyncClientFactory();
 	// Inherited via IAsyncClientFactory
-	std::shared_ptr<IAsyncClient> build(const ClientType type) override;
-private:
-
-	std::wstring pipe_address_;
+	std::shared_ptr<IAsyncClient> build(const ClientType type, std::string pipe_address) override;
 };
 

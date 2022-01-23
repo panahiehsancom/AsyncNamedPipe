@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IAsyncClientFactory.h"
+#include "VirtualClientNamedPipe.h"
 
 class AsyncClientFactory : public IAsyncClientFactory
 {

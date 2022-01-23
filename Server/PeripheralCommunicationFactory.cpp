@@ -12,5 +12,15 @@ std::shared_ptr<IAsyncServer> PeripheralCommunicationFactory::build(Communicatio
 		std::shared_ptr<IAsyncClientFactory> client_factory = std::make_shared<AsyncClientFactory>();
 		return std::make_shared<NamedPipeServer>(named_pipe_address_, buffer_size_, client_factory);
 	}
+	else if (communication == ICommunicationFactory::CommunicationType::ReadPipeServer)
+	{
+		std::shared_ptr<IAsyncClientFactory> client_factory = std::make_shared<AsyncClientFactory>();
+		return std::make_shared<ServerPipeRead>(named_pipe_address_, buffer_size_, client_factory);
+	}
+	else if (communication == ICommunicationFactory::CommunicationType::WritePipeServrer)
+	{
+		std::shared_ptr<IAsyncClientFactory> client_factory = std::make_shared<AsyncClientFactory>();
+		return std::make_shared<ServerPipeWrite>(named_pipe_address_, buffer_size_, client_factory);
+	}
 	return nullptr;
 }

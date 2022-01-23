@@ -3,22 +3,25 @@
 #include <iostream>
 #include <thread>
 
-
 #include "AsyncClientFactory.h"
+
+
+#define Async 
 
 std::string convert_standard_time(int year, int month, int day, int hour, int minute, int second);
 std::string get_now();
+
 void data_received(const char* data, unsigned int size)
 {
 	std::string str_rec_data(data, size);
-	std::cout << "data received :" << str_rec_data << std::endl;
+	std::cout <<  str_rec_data;
 }
 
 int main()
-{
-
-	std::shared_ptr<AsyncClientFactory> factory = std::make_shared<AsyncClientFactory>(L"\\\\.\\pipe\\pipe");
-	std::shared_ptr<IAsyncClient> client = factory->build(IAsyncClientFactory::ClientType::NamedPipe);
+{ 
+#ifndef Async
+	std::shared_ptr<AsyncClientFactory> factory = std::make_shared<AsyncClientFactory>();
+	std::shared_ptr<IAsyncClient> client = factory->build(IAsyncClientFactory::ClientType::FullDuplex, "\\\\.\\pipe\\pipe");
 	client->connect_on_data_received(std::bind(data_received, std::placeholders::_1, std::placeholders::_2));
 	if (client == nullptr)
 		return -1;
@@ -36,11 +39,55 @@ int main()
 	}
 	while (client->is_connected())
 	{
-		std::string time = get_now();
+		std::string time = get_now() + "\r\n";
 		client->send(time.c_str(), time.size());
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
     return 0;
+#endif
+
+#ifdef Async
+	std::string read_pip_address = "\\\\.\\pipe\\wpipe";
+	std::string write_pip_address = "\\\\.\\pipe\\rpipe";
+	std::shared_ptr<AsyncClientFactory> factory = std::make_shared<AsyncClientFactory>();
+	std::shared_ptr<IAsyncClient> read_pipe = factory->build(IAsyncClientFactory::ClientType::Read, read_pip_address);
+	std::shared_ptr<IAsyncClient> write_pipe = factory->build(IAsyncClientFactory::ClientType::Write, write_pip_address);
+	 
+	bool init_state = read_pipe->init();
+	if (!init_state)
+	{
+		std::cout << "initialization of read pipe failed" << std::endl;
+		return -1;
+	}
+	read_pipe->connect_on_data_received(std::bind(data_received, std::placeholders::_1, std::placeholders::_2));
+	init_state = write_pipe->init();
+	if (!init_state)
+	{
+		std::cout << "initialization of write pipe failed" << std::endl;
+		return -1;
+	}
+
+	bool connect_state = read_pipe->connect();
+	if (!connect_state)
+	{
+		std::cout << "cannot connect to read named pip server" << std::endl;
+		return -1;
+	}
+	connect_state = write_pipe->connect();
+	if (!connect_state)
+	{
+		std::cout << "cannot connect to write named pip server" << std::endl;
+		return -1;
+	}
+	while (write_pipe->is_connected())
+	{
+		std::string time = get_now() + "\r\n";
+		write_pipe->send(time.c_str(), time.size());
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+	return 0;
+
+#endif
 }
 
 std::string convert_standard_time(int year, int month, int day, int hour, int minute, int second)

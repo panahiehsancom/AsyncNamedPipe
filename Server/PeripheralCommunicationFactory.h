@@ -4,7 +4,9 @@
 
 #include "AsyncClientFactory.h"
 #include "ICommunicationFactory.h" 
-#include "NamedPipeServer.h"
+#include "NamedPipeServer.h" 
+#include "ServerPipeRead.h"
+#include "ServerPipeWrite.h"
 
 class PeripheralCommunicationFactory : public ICommunicationFactory
 {
@@ -14,5 +16,4 @@ public:
 private:
 	std::wstring named_pipe_address_;
 	unsigned int buffer_size_;
-};
-
+}; 

@@ -1,6 +1,6 @@
 #include "NamedPipeClient.h"
 
-NamedPipeClient::NamedPipeClient(std::wstring address, const unsigned int buffer_size) : address_(address), buffer_size_(buffer_size)
+NamedPipeClient::NamedPipeClient(std::string address, const unsigned int buffer_size) : address_(address), buffer_size_(buffer_size)
 {
 	is_connected_ = false;
 	write_command_ = false;
@@ -14,7 +14,9 @@ bool NamedPipeClient::init()
 
 bool NamedPipeClient::connect()
 {
-	pipe_ = CreateFile(address_.c_str(),
+	std::wstring waddress(address_.begin(), address_.end());
+
+	pipe_ = CreateFile(waddress.c_str(),
 		GENERIC_READ | GENERIC_WRITE,
 		0,
 		NULL,

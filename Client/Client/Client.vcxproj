@@ -151,10 +151,14 @@
   <ItemGroup>
     <ClCompile Include="AsyncClientFactory.cpp" />
     <ClCompile Include="Client.cpp" />
+    <ClCompile Include="ClientReadPipe.cpp" />
+    <ClCompile Include="ClientWritePipe.cpp" />
     <ClCompile Include="NamedPipeClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AsyncClientFactory.h" />
+    <ClInclude Include="ClientReadPipe.h" />
+    <ClInclude Include="ClientWritePipe.h" />
     <ClInclude Include="IAsyncClient.h" />
     <ClInclude Include="IAsyncClientFactory.h" />
     <ClInclude Include="NamedPipeClient.h" />
